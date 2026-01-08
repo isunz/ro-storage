@@ -1,51 +1,59 @@
-// 1. Mock Browser Environment (localStorage/sessionStorage)
+// 1. Mock Browser Environment
 const mockStorage = {
     _data: {},
     getItem(key) { return this._data[key] || null; },
     setItem(key, val) { this._data[key] = String(val); },
     removeItem(key) { delete this._data[key]; },
-    clear() { this._data = {}; }
+    clear() { this._data = {}; },
+    key(i) { return Object.keys(this._data)[i]; },
+    get length() { return Object.keys(this._data).length; }
 };
 
-// Global Injection for Node
 global.window = {
-    localStorage: mockStorage,
-    sessionStorage: mockStorage
+    localStorage: { ...mockStorage, _data: {} },
+    sessionStorage: { ...mockStorage, _data: {} }
 };
-global.localStorage = mockStorage;
-global.sessionStorage = mockStorage;
+global.localStorage = global.window.localStorage;
+global.sessionStorage = global.window.sessionStorage;
 
-
-// 2. Load Modules
-// 실제로는 @mars-/ro가 설치되어 있어야 하지만,
-// 테스트를 위해 ro의 최소 기능을 Mocking합니다.
+// 2. Mock ro
 const roMock = {
     plugin: {
         add: function(name, def) {
-            this[name] = def.body; // Simple registration
+            this[name] = def.body;
+            if (def.install) def.install(this);
         }
     },
-    // storage plugin uses ro.obj.get if available
     obj: {
-        get: function(obj, path) { return obj[path]; } // Simple mock
+        get: function(obj, path) {
+            if (!path) return obj;
+            return path.split('.').reduce((acc, curr) => (acc && acc[curr] !== undefined) ? acc[curr] : undefined, obj);
+        }
+    },
+    use: function(plugin) {
+        this.plugin.add(plugin.name, plugin);
     }
 };
 
-// Bind context
-roMock.plugin.add = roMock.plugin.add.bind(roMock);
-
-// Load Plugin (Build result)
+// 3. Load Plugin & Tests
 const registerPlugin = require('../dist/ro-storage.js');
 const testStorage = require('./storage.test.js');
+const testGetKeys = require('./getKeys.test.js');
+const testGetJson = require('./getJson.test.js');
 
 console.log('--- Node.js Verification Start ---');
 
 try {
-    // 3. Register Plugin
-    registerPlugin(roMock);
+    // Register (Simulate ro.use)
+    // dist 파일은 export default 형태일 수 있으므로 처리 필요
+    // CommonJS require로 가져올 때 default가 있으면 그것을 사용
+    const plugin = registerPlugin.default || registerPlugin;
+    roMock.use(plugin);
 
-    // 4. Run Test
+    // Run Tests
     testStorage(roMock);
+    testGetKeys(roMock);
+    testGetJson(roMock);
 
 } catch (e) {
     console.error(e);

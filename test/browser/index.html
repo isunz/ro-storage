@@ -12,26 +12,44 @@
     </style>
 </head>
 <body>
-<h1>RoStorage Browser Test</h1>
+<h1>RoStorage Browser Test (ro.use)</h1>
 <div id="status">Running...</div>
 <div id="log"></div>
 
 <script>
     window.ro = {
         plugin: {
-            add: function(name, def) {
-                this[name] = def.body;
+            // [NEW] ro.use 구현 (플러그인 객체를 받아서 처리)
+            use: function(plugin, options) {
+                console.log('[Mock] ro.use called with:', plugin);
+
+                // 1. install 메서드 실행 (초기화)
+                if (plugin && typeof plugin.install === 'function') {
+                    plugin.install(this, options);
+                }
+
+                // 2. name/body가 있으면 기능 자동 등록
+                if (plugin && plugin.name && plugin.body) {
+                    this[plugin.name] = plugin.body;
+                    console.log(`[Mock] Registered ro.${plugin.name}`);
+                }
+
+                return this;
             }
         },
         obj: {
+            // 간단한 get 구현 (Deep path 지원)
             get: function(obj, path) {
-                if(!path) return obj;
-                return obj[path]; // Simple Mock
+                if (!path) return obj;
+                return path.split('.').reduce(function(acc, part) {
+                    return acc && acc[part];
+                }, obj);
             }
         }
     };
-    // Bind required
-    window.ro.plugin.add = window.ro.plugin.add.bind(window.ro);
+
+    // [NEW] ro.use 단축어 바인딩
+    window.ro.use = window.ro.plugin.use.bind(window.ro);
 </script>
 
 <script src="../../dist/ro-storage.min.js"></script>
@@ -50,10 +68,18 @@
     };
 
     try {
-        // 플러그인 등록
-        RoStorage(window.ro);
+        if (!window.RoStorage) {
+            throw new Error('RoStorage plugin script not loaded.');
+        }
 
-        // 테스트 실행 (storage.test.js에 있는 함수)
+        // [NEW] 변경된 등록 방식 사용
+        // 기존: RoStorage(window.ro);
+        // 변경: ro.use(RoStorage);
+        console.log('--- Registering Plugin ---');
+        window.ro.use(window.RoStorage);
+
+        // 테스트 실행
+        console.log('--- Running Tests ---');
         testStorage(window.ro);
 
         statusEl.innerText = 'All Tests Passed!';
