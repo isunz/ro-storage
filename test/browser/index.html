@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>RoStorage Browser Test</title>
+    <style>
+        body { font-family: sans-serif; padding: 20px; }
+        .status { padding: 10px; border-radius: 4px; font-weight: bold; margin-bottom: 10px; }
+        .success { background-color: #d4edda; color: #155724; }
+        .error { background-color: #f8d7da; color: #721c24; }
+        #log { background: #f8f9fa; padding: 10px; border: 1px solid #ddd; white-space: pre-wrap; font-family: monospace; }
+    </style>
+</head>
+<body>
+<h1>RoStorage Browser Test</h1>
+<div id="status">Running...</div>
+<div id="log"></div>
+
+<script>
+    window.ro = {
+        plugin: {
+            add: function(name, def) {
+                this[name] = def.body;
+            }
+        },
+        obj: {
+            get: function(obj, path) {
+                if(!path) return obj;
+                return obj[path]; // Simple Mock
+            }
+        }
+    };
+    // Bind required
+    window.ro.plugin.add = window.ro.plugin.add.bind(window.ro);
+</script>
+
+<script src="../../dist/ro-storage.min.js"></script>
+
+<script src="../storage.test.js"></script>
+
+<script>
+    const logEl = document.getElementById('log');
+    const statusEl = document.getElementById('status');
+
+    // 화면 로그 오버라이드
+    const originalLog = console.log;
+    console.log = function(...args) {
+        originalLog.apply(console, args);
+        logEl.innerText += args.join(' ') + '\n';
+    };
+
+    try {
+        // 플러그인 등록
+        RoStorage(window.ro);
+
+        // 테스트 실행 (storage.test.js에 있는 함수)
+        testStorage(window.ro);
+
+        statusEl.innerText = 'All Tests Passed!';
+        statusEl.className = 'status success';
+    } catch (e) {
+        console.error(e);
+        statusEl.innerText = 'Failed: ' + e.message;
+        statusEl.className = 'status error';
+    }
+</script>
+</body>
+</html>

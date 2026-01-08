@@ -1,0 +1,22 @@
+{
+  "name": "@mars-/ro-storage",
+  "version": "1.0.0",
+  "description": "Storage Plugin for @mars-/ro",
+  "main": "dist/ro-storage.js",
+  "module": "dist/ro-storage.mjs",
+  "browser": "dist/ro-storage.min.js",
+  "scripts": {
+    "build": "rollup -c rollup.config.mjs",
+    "test:node": "node test/verify-node.js",
+    "prepublishOnly": "npm run build && npm run test:node"
+  },
+  "peerDependencies": {
+    "@mars-/ro": "../ro"
+  },
+  "devDependencies": {
+    "@rollup/plugin-terser": "^0.4.4",
+    "rollup": "^4.55.1"
+  },
+  "author": "isunz",
+  "license": "ISC"
+}
